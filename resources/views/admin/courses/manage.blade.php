@@ -1,0 +1,1 @@
+{{-- Informasi penting dari kelas tertentu --}}
