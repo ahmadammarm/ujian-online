@@ -12,7 +12,7 @@ class CourseController extends Controller
      */
     public function index()
     {
-        return 'CourseController@index';
+        return view('admin.courses.index');
     }
 
     /**
@@ -20,7 +20,7 @@ class CourseController extends Controller
      */
     public function create()
     {
-        //
+        return view('admin.courses.create');
     }
 
     /**
