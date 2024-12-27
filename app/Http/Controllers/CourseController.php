@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Course;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CourseController extends Controller
 {
@@ -12,7 +16,8 @@ class CourseController extends Controller
      */
     public function index()
     {
-        return view('admin.courses.index');
+        $courses = Course::orderBy('id', 'desc')->get();
+        return view('admin.courses.index', compact('courses'));
     }
 
     /**
@@ -20,7 +25,8 @@ class CourseController extends Controller
      */
     public function create()
     {
-        return view('admin.courses.create');
+        $categories = Category::all();
+        return view('admin.courses.create', compact('categories'));
     }
 
     /**
@@ -28,7 +34,34 @@ class CourseController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|integer',
+            'cover' => 'required|image|mimes:jpeg,png,jpg',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            if($request->hasFile('cover')) {
+                $coverPath = $request->file('cover')->store('images/product_covers', 'public');
+                $validate['cover'] = $coverPath;
+            }
+            $validated['slug'] = Str::slug($request->name);
+            $newCourse = Course::create($validated);
+
+            DB::commit();
+
+            return redirect()->route('dashboard.courses.index')->with('success', 'Course created successfully');
+        }
+        catch (\Exception $e) {
+            DB::rollBack();
+            $error = ValidationException::withMessages([
+                'system_error' => ['System Error', $e->getMessage()],
+            ]);
+
+            throw $error;
+        }
     }
 
     /**
