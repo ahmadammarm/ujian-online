@@ -37,7 +37,7 @@ class CourseController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|integer',
-            'cover' => 'required|image|mimes:jpeg,png,jpg',
+            'cover' => 'sometimes|image|mimes:jpeg,png,jpg',
         ]);
 
         DB::beginTransaction();
@@ -77,7 +77,8 @@ class CourseController extends Controller
      */
     public function edit(Course $course)
     {
-        //
+        $categories = Category::all();
+        return view('admin.courses.edit', compact('course', 'categories'));
     }
 
     /**
@@ -85,7 +86,34 @@ class CourseController extends Controller
      */
     public function update(Request $request, Course $course)
     {
-        //
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|integer',
+            'cover' => 'sometimes|image|mimes:jpeg,png,jpg',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            if($request->hasFile('cover')) {
+                $coverPath = $request->file('cover')->store('images/product_covers', 'public');
+                $validate['cover'] = $coverPath;
+            }
+            $validated['slug'] = Str::slug($request->name);
+            $course->update($validated);
+
+            DB::commit();
+
+            return redirect()->route('dashboard.courses.index')->with('success', 'Course created successfully');
+        }
+        catch (\Exception $e) {
+            DB::rollBack();
+            $error = ValidationException::withMessages([
+                'system_error' => ['System Error', $e->getMessage()],
+            ]);
+
+            throw $error;
+        }
     }
 
     /**
@@ -93,6 +121,7 @@ class CourseController extends Controller
      */
     public function destroy(Course $course)
     {
-        //
+        $course->delete();
+        return redirect()->route('dashboard.courses.index')->with('success', 'Course deleted successfully');
     }
 }

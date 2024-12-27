@@ -70,7 +70,7 @@
                 class="flex flex-col gap-[30px] w-[500px] mx-[70px] mt-10">
                 @csrf
                 <div class="flex gap-5 items-center">
-                    <input type="file" name="cover" id="icon" class="peer hidden"
+                    {{-- <input type="file" name="cover" id="icon" class="peer hidden"
                         onchange="previewFile()" data-empty="true" required>
                     <div
                         class="relative w-[100px] h-[100px] rounded-full overflow-hidden peer-data-[empty=true]:border-[3px] peer-data-[empty=true]:border-dashed peer-data-[empty=true]:border-[#EEEEEE]">
@@ -81,7 +81,7 @@
                             class="absolute transform -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2 text-center font-semibold text-sm text-[#7F8190]">Icon
                             <br>Course
                         </span>
-                    </div>
+                    </div> --}}
                     <button type="button"
                         class="flex shrink-0 p-[8px_20px] h-fit items-center rounded-full bg-[#0A090B] font-semibold text-white"
                         onclick="document.getElementById('icon').click()">
