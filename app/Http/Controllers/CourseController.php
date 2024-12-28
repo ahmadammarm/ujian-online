@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Course;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -37,7 +38,7 @@ class CourseController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|integer',
-            'cover' => 'sometimes|image|mimes:jpeg,png,jpg',
+            'cover' => 'sometimes|image|mimes:jpeg,png,jpg|max:2048', // tambahkan max size
         ]);
 
         DB::beginTransaction();
@@ -45,8 +46,9 @@ class CourseController extends Controller
         try {
             if($request->hasFile('cover')) {
                 $coverPath = $request->file('cover')->store('images/product_covers', 'public');
-                $validate['cover'] = $coverPath;
+                $validated['cover'] = $coverPath;
             }
+            
             $validated['slug'] = Str::slug($request->name);
             $newCourse = Course::create($validated);
 
@@ -56,6 +58,12 @@ class CourseController extends Controller
         }
         catch (\Exception $e) {
             DB::rollBack();
+            
+            // Hapus file yang sudah terupload jika ada error
+            if(isset($coverPath) && Storage::disk('public')->exists($coverPath)) {
+                Storage::disk('public')->delete($coverPath);
+            }
+
             $error = ValidationException::withMessages([
                 'system_error' => ['System Error', $e->getMessage()],
             ]);
@@ -69,7 +77,8 @@ class CourseController extends Controller
      */
     public function show(Course $course)
     {
-        //
+        $students = $course->students()->orderBy('id', 'DESC')->get();
+        return view('admin.courses.manage', compact('course', 'students'));
     }
 
     /**
@@ -89,25 +98,37 @@ class CourseController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'required|integer',
-            'cover' => 'sometimes|image|mimes:jpeg,png,jpg',
+            'cover' => 'sometimes|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         DB::beginTransaction();
 
         try {
             if($request->hasFile('cover')) {
+                // Hapus file lama jika ada
+                if($course->cover && Storage::disk('public')->exists($course->cover)) {
+                    Storage::disk('public')->delete($course->cover);
+                }
+                
                 $coverPath = $request->file('cover')->store('images/product_covers', 'public');
-                $validate['cover'] = $coverPath;
+                $validated['cover'] = $coverPath;
             }
+            
             $validated['slug'] = Str::slug($request->name);
             $course->update($validated);
 
             DB::commit();
 
-            return redirect()->route('dashboard.courses.index')->with('success', 'Course created successfully');
+            return redirect()->route('dashboard.courses.index')->with('success', 'Course updated successfully');
         }
         catch (\Exception $e) {
             DB::rollBack();
+            
+            // Hapus file yang sudah terupload jika ada error
+            if(isset($coverPath) && Storage::disk('public')->exists($coverPath)) {
+                Storage::disk('public')->delete($coverPath);
+            }
+
             $error = ValidationException::withMessages([
                 'system_error' => ['System Error', $e->getMessage()],
             ]);
@@ -121,7 +142,27 @@ class CourseController extends Controller
      */
     public function destroy(Course $course)
     {
-        $course->delete();
-        return redirect()->route('dashboard.courses.index')->with('success', 'Course deleted successfully');
+        DB::beginTransaction();
+
+        try {
+            // Hapus file cover jika ada
+            if($course->cover && Storage::disk('public')->exists($course->cover)) {
+                Storage::disk('public')->delete($course->cover);
+            }
+
+            $course->delete();
+            
+            DB::commit();
+
+            return redirect()->route('dashboard.courses.index')->with('success', 'Course deleted successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            $error = ValidationException::withMessages([
+                'system_error' => ['System Error', $e->getMessage()],
+            ]);
+
+            throw $error;
+        }
     }
 }
